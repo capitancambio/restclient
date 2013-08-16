@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -58,11 +59,21 @@ type RequestResponse struct {
 	HttpResponse *http.Response // Response object from http package
 }
 
+type Encoder interface {
+	Encode(v interface{}) error
+}
+type Decoder interface {
+	Decode(v interface{}) error
+}
+
 // Client is a REST client.
 type Client struct {
 	HttpClient      *http.Client
-	UnsafeBasicAuth bool // Allow Basic Auth over unencrypted HTTP
-	Log             bool // Log request and response
+	UnsafeBasicAuth bool                    // Allow Basic Auth over unencrypted HTTP
+	Log             bool                    // Log request and response
+	EncoderSupplier func(io.Writer) Encoder //Supplies the endoder objects
+	DecoderSupplier func(io.Reader) Decoder //Supplies the endoder objects
+        ContentType string
 }
 
 // New returns a new Client instance.
@@ -70,6 +81,13 @@ func New() *Client {
 	return &Client{
 		HttpClient:      new(http.Client),
 		UnsafeBasicAuth: false,
+		EncoderSupplier: func(w io.Writer) Encoder {
+			return json.NewEncoder(w)
+		},
+		DecoderSupplier: func(r io.Reader) Decoder{
+			return json.NewDecoder(r)
+		},
+                ContentType: "application/json",
 	}
 }
 
@@ -110,18 +128,22 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		req, _ = http.NewRequest(m, u.String(), nil)
 	} else {
 		var b []byte
-		b, err = json.Marshal(&rr.Data)
+		buf := bytes.NewBuffer(b)
+		encoder := c.EncoderSupplier(buf)
+		//b, err = json.Marshal(&rr.Data)
+		err = encoder.Encode(&rr.Data)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		buf := bytes.NewBuffer(b)
+
+		//buf := bytes.NewBuffer(b)
 		req, err = http.NewRequest(m, u.String(), buf)
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Content-Type", c.ContentType)
 	}
 	if rr.Header != nil {
 		for key, values := range *rr.Header {
@@ -134,7 +156,7 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 	// If Accept header is unset, set it for JSON.
 	//
 	if req.Header.Get("Accept") == "" {
-		req.Header.Add("Accept", "application/json")
+		req.Header.Add("Accept", c.ContentType)
 	}
 	//
 	// Set HTTP Basic authentication if userinfo is supplied
@@ -174,9 +196,11 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		return
 	}
 	rr.RawText = string(data)
-	json.Unmarshal(data, &rr.Error) // Ignore errors
+	decoder := c.DecoderSupplier(bytes.NewBuffer(data))
+	decoder.Decode(&rr.Error) // Ignore errors
 	if rr.RawText != "" && status < 300 {
-		err = json.Unmarshal(data, &rr.Result) // Ignore errors
+		decoder := c.DecoderSupplier(bytes.NewBuffer(data))
+		err = decoder.Decode(&rr.Result) // Ignore errors
 	}
 	if c.Log {
 		log.Println("--------------------------------------------------------------------------------")
@@ -184,8 +208,9 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		log.Println("--------------------------------------------------------------------------------")
 		log.Println("Status: ", status)
 		if rr.RawText != "" {
+			decoder := c.DecoderSupplier(bytes.NewBuffer(data))
 			raw := json.RawMessage{}
-			if json.Unmarshal(data, &raw) == nil {
+			if decoder.Decode(&raw) == nil {
 				prettyPrint(&raw)
 			} else {
 				prettyPrint(rr.RawText)
