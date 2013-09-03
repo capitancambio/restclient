@@ -199,8 +199,9 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 	decoder := c.DecoderSupplier(bytes.NewBuffer(data))
 	decoder.Decode(&rr.Error) // Ignore errors
 	if rr.RawText != "" && status < 300 {
-		decoder := c.DecoderSupplier(bytes.NewBuffer(data))
-		err = decoder.Decode(&rr.Result) // Ignore errors
+
+		decoder := c.DecoderSupplier(bytes.NewReader(data))
+		err = decoder.Decode(rr.Result) // Ignore errors
 	}
 	if c.Log {
 		log.Println("--------------------------------------------------------------------------------")
@@ -208,13 +209,13 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		log.Println("--------------------------------------------------------------------------------")
 		log.Println("Status: ", status)
 		if rr.RawText != "" {
-			decoder := c.DecoderSupplier(bytes.NewBuffer(data))
-			raw := json.RawMessage{}
-			if decoder.Decode(&raw) == nil {
-				prettyPrint(&raw)
-			} else {
-				prettyPrint(rr.RawText)
-			}
+			//decoder := c.DecoderSupplier(bytes.NewBuffer(data))
+			//raw := json.RawMessage{}
+			//if decoder.Decode(&raw) == nil {
+				//prettyPrint(&raw)
+			//} else {
+				//prettyPrint(rr.RawText)
+			//}
 		} else {
 			log.Println("Empty response body")
 		}
