@@ -131,13 +131,14 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		buf := bytes.NewBuffer(b)
 		encoder := c.EncoderSupplier(buf)
 		//b, err = json.Marshal(&rr.Data)
-		err = encoder.Encode(&rr.Data)
+		err = encoder.Encode(rr.Data)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
 		//buf := bytes.NewBuffer(b)
+                println(buf.String())
 		req, err = http.NewRequest(m, u.String(), buf)
 		if err != nil {
 			log.Println(err)
