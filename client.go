@@ -73,7 +73,15 @@ type Client struct {
 	Log             bool                    // Log request and response
 	EncoderSupplier func(io.Writer) Encoder //Supplies the endoder objects
 	DecoderSupplier func(io.Reader) Decoder //Supplies the endoder objects
-        ContentType string
+	ContentType     string
+}
+
+func (c *Client) SetDecoderSupplier(fn func(io.Reader) Decoder) {
+	c.DecoderSupplier = fn
+}
+
+func (c *Client) SetEncoderSupplier(fn func(io.Writer) Encoder) {
+	c.EncoderSupplier= fn
 }
 
 // New returns a new Client instance.
@@ -84,10 +92,10 @@ func New() *Client {
 		EncoderSupplier: func(w io.Writer) Encoder {
 			return json.NewEncoder(w)
 		},
-		DecoderSupplier: func(r io.Reader) Decoder{
+		DecoderSupplier: func(r io.Reader) Decoder {
 			return json.NewDecoder(r)
 		},
-                ContentType: "application/json",
+		ContentType: "application/json",
 	}
 }
 
@@ -138,7 +146,7 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		}
 
 		//buf := bytes.NewBuffer(b)
-                println(buf.String())
+		println(buf.String())
 		req, err = http.NewRequest(m, u.String(), buf)
 		if err != nil {
 			log.Println(err)
@@ -213,9 +221,9 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 			//decoder := c.DecoderSupplier(bytes.NewBuffer(data))
 			//raw := json.RawMessage{}
 			//if decoder.Decode(&raw) == nil {
-				//prettyPrint(&raw)
+			//prettyPrint(&raw)
 			//} else {
-				//prettyPrint(rr.RawText)
+			//prettyPrint(rr.RawText)
 			//}
 		} else {
 			log.Println("Empty response body")
