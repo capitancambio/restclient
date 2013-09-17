@@ -81,7 +81,7 @@ func (c *Client) SetDecoderSupplier(fn func(io.Reader) Decoder) {
 }
 
 func (c *Client) SetEncoderSupplier(fn func(io.Writer) Encoder) {
-	c.EncoderSupplier= fn
+	c.EncoderSupplier = fn
 }
 
 // New returns a new Client instance.
@@ -146,7 +146,6 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 		}
 
 		//buf := bytes.NewBuffer(b)
-		println(buf.String())
 		req, err = http.NewRequest(m, u.String(), buf)
 		if err != nil {
 			log.Println(err)
