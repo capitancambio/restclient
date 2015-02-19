@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -202,19 +201,13 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 	status = resp.StatusCode
 	rr.HttpResponse = resp
 	rr.Status = resp.StatusCode
-	var data []byte
-	data, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	rr.RawText = string(data)
-	decoder := c.DecoderSupplier(bytes.NewBuffer(data))
-	decoder.Decode(&rr.Error) // Ignore errors
-	if rr.RawText != "" && status < 300 {
-
-		decoder := c.DecoderSupplier(bytes.NewReader(data))
+	if status < 300 {
+		decoder := c.DecoderSupplier(resp.Body)
 		err = decoder.Decode(rr.Result) // Ignore errors
+
+	} else {
+		decoder := c.DecoderSupplier(resp.Body)
+		decoder.Decode(&rr.Error) // Ignore errors
 	}
 	if c.Log {
 		log.Println("--------------------------------------------------------------------------------")
