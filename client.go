@@ -201,7 +201,7 @@ func (c *Client) Do(rr *RequestResponse) (status int, err error) {
 	status = resp.StatusCode
 	rr.HttpResponse = resp
 	rr.Status = resp.StatusCode
-	if status < 300 {
+	if status < 300 && rr.Result != nil {
 		decoder := c.DecoderSupplier(resp.Body)
 		err = decoder.Decode(rr.Result) // Ignore errors
 
